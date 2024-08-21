@@ -20,6 +20,15 @@ fastify.decorate("authenticate", async (request, reply) => {
     }
 });     
 
+// JWT Token Verification Hook
+const verifyJwtOrPublicRoute = async (request, reply) => {
+    try {
+        await request.jwtVerify();
+    } catch (err) {
+        reply.status(401).send({ error: 'Unauthorized', message: 'Invalid or expired token' });
+    }
+};
+
 // Test the database connection
 sequelize.authenticate()
     .then(() => console.log('Database connected...'))
@@ -31,27 +40,14 @@ fastify.register(productRoutes); // Register product routes
 fastify.register(chatRoutes);  // Register chat routes
 fastify.register(authRoutes); // Register authentication routes
 
-// JWT Token Verification Hook
-fastify.addHook('onRequest', async (request, reply) => {
-    try {
-        const routePath = request.routerPath;  // Corrected to request.routerPath
-
-        // Define route paths that do not require authentication
-        const publicRoutes = ['/login', '/signup', '/products','/products/:id','/users','/send-message','/get-messages/:userId1-:userId2'];  // Use path strings
-
-        if (!publicRoutes.includes(routePath)) {
-            await request.jwtVerify();
-        }
-    } catch (err) {
-        reply.status(401).send({ error: 'Unauthorized', message: 'Invalid or expired token' });
-    }
-});
-
 // Start server
-fastify.listen(3000, err => {
+fastify.listen({ port: 3000 }, err => {
     if (err) {
         console.error(err);
         process.exit(1);
     }
     console.log('Server running on port 3000');
 });
+
+// Export the verification function
+module.exports = { fastify, verifyJwtOrPublicRoute };
